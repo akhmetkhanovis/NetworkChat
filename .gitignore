@@ -1,0 +1,5 @@
+# Project exclude paths
+/ChatClient/target/
+/ChatServer/target/
+/Connection/target/
+/Utils/target/
