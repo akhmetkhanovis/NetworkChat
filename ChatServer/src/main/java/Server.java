@@ -1,20 +1,19 @@
 import java.io.*;
 import java.net.ServerSocket;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class Server {
 
-    private static final int PORT = 9199;
     private static final BlockingQueue<Connection> connections = new LinkedBlockingQueue<>();
-    private static final Logger logger = Logger.getInstance();
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
 
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+        try (ServerSocket serverSocket = new ServerSocket(getPort())) {
 
             System.out.println("Server started");
-            logger.log("Server started");
 
             while (true) {
                 Connection connection = new Connection(serverSocket);
@@ -26,7 +25,6 @@ public class Server {
                         String name = connection.readLine();
 
                         sendToChat("SERVER: Welcome, " + name + "! To leave chat type /exit");
-                        logger.log(connection + " (" + name + ") connected");
 
                         String message;
                         while (true) {
@@ -34,15 +32,12 @@ public class Server {
                                 message = connection.readLine();
                                 if (message.equals("/exit")) {
                                     connections.remove(connection);
-                                    logger.log(connection + " (" + name + ")" + " disconnected");
                                     sendToChat("SERVER: " + name + " has left chat");
                                     break;
                                 }
                                 sendToChat(name + ": " + message);
-                                logger.log(connection + " (" + name + ") wrote to chat: " + message);
                             } catch (Exception e) {
                                 connections.remove(connection);
-                                logger.log(connection + " (" + name + ")" + " disconnected");
                                 sendToChat("SERVER: " + name + " was disconnected");
                                 break;
                             }
@@ -59,20 +54,37 @@ public class Server {
             }
 
         } catch (IOException e) {
-            logger.log("Client disconnected");
+            e.printStackTrace();
         }
 
     }
 
     public static void sendToChat(String msg) {
+        String now = getLocalDateTimeNow();
         System.out.println(msg);
         for (Connection c : connections) {
             try {
-                c.writeLine(msg);
+                c.writeLine(now + msg);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    private static int getPort() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(FileNames.SETTINGS.toString()))) {
+            String[] settings = reader.readLine().split(":");
+            return Integer.parseInt(settings[1]);
+        } catch (IOException e) {
+            System.out.println("Failed to get settings from file");
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String getLocalDateTimeNow() {
+        return "[" +
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")) +
+                "] ";
     }
 
 }
